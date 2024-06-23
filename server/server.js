@@ -2,67 +2,78 @@ const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
 const SpotifyStrategy = require('passport-spotify').Strategy;
-const dotenv = require('dotenv');
 const axios = require('axios');
-
-dotenv.config();
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
+const port = process.env.PORT || 5000;
 
-app.use(session({ secret: 'your_secret_key', resave: true, saveUninitialized: true }));
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+app.use(session({
+  secret: 'your_secret_key',
+  resave: false,
+  saveUninitialized: true,
+}));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser(function(user, done) {
+passport.serializeUser((user, done) => {
   done(null, user);
 });
 
-passport.deserializeUser(function(obj, done) {
+passport.deserializeUser((obj, done) => {
   done(null, obj);
 });
 
 passport.use(new SpotifyStrategy({
-    clientID: process.env.SPOTIFY_CLIENT_ID,
-    clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-    callbackURL: 'http://localhost:5000/auth/spotify/callback'
-  },
-  function(accessToken, refreshToken, expires_in, profile, done) {
-    profile.accessToken = accessToken;
-    return done(null, profile);
+  clientID: process.env.SPOTIFY_CLIENT_ID,
+  clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  callbackURL: 'http://localhost:5000/auth/spotify/callback'
+},
+  (accessToken, refreshToken, expires_in, profile, done) => {
+    return done(null, { profile, accessToken });
   }
 ));
 
 app.get('/auth/spotify', passport.authenticate('spotify', {
-  scope: ['user-read-private', 'user-read-email', 'playlist-read-private', 'playlist-read-collaborative'],
-  showDialog: true
+  scope: ['user-read-email', 'user-read-private', 'playlist-read-private', 'playlist-read-collaborative'],
+  showDialog: true,
 }));
 
-app.get('/auth/spotify/callback', 
+app.get('/auth/spotify/callback',
   passport.authenticate('spotify', { failureRedirect: '/' }),
-  function(req, res) {
-    res.redirect('/playlists');
+  (req, res) => {
+    res.redirect('/');
   });
 
-app.get('/playlists', ensureAuthenticated, async (req, res) => {
+app.get('/playlists', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).send('Not authenticated');
+  }
+
+  const accessToken = req.user.accessToken;
+
   try {
     const response = await axios.get('https://api.spotify.com/v1/me/playlists', {
       headers: {
-        Authorization: `Bearer ${req.user.accessToken}`
-      }
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
+
     res.json(response.data);
   } catch (error) {
-    res.status(500).send(error.message);
+    console.error(error);
+    res.status(500).send('Failed to fetch playlists');
   }
 });
 
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.redirect('/auth/spotify');
-}
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build/index.html'));
+});
 
-app.listen(5000, () => {
-  console.log('Server running on port 5000');
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
