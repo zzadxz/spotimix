@@ -42,11 +42,15 @@ app.get(
   '/auth/spotify/callback',
   passport.authenticate('spotify', { failureRedirect: '/' }),
   (req, res) => {
-    res.redirect('/playlists');
+    res.redirect('/');
   }
 );
 
 app.get('/playlists', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { accessToken } = req.user;
   axios
     .get('https://api.spotify.com/v1/me/playlists', {
@@ -61,7 +65,7 @@ app.get('/playlists', (req, res) => {
 app.use(express.static(path.join(__dirname, '../client/build')));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+  res.sendFile(path.join(__dirname, '../client/build/index.html'));
 });
 
 app.listen(PORT, () => {
