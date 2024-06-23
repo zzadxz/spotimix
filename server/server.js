@@ -49,32 +49,44 @@ app.get(
 
 app.get('/api/playlists', (req, res) => {
   if (!req.user) {
+    console.log('Unauthorized request to /api/playlists');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const { accessToken } = req.user;
+  console.log('Fetching playlists with accessToken:', accessToken);
   axios
     .get('https://api.spotify.com/v1/me/playlists', {
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
     })
-    .then(response => res.json(response.data))
-    .catch(error => res.status(500).send(error));
+    .then(response => {
+      console.log('Playlists fetched:', response.data);
+      res.json(response.data);
+    })
+    .catch(error => {
+      console.error('Error fetching playlists:', error);
+      res.status(500).send(error);
+    });
 });
 
 app.get('/api/copy-playlists', async (req, res) => {
   try {
     if (!req.user) {
+      console.log('Unauthorized request to /api/copy-playlists');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const { accessToken } = req.user;
+    console.log('Copying playlists with accessToken:', accessToken);
 
     await copyPlaylists(accessToken);
 
+    console.log('Playlists copied successfully');
     res.send('Playlists copied successfully!');
   } catch (error) {
+    console.error('Error copying playlists:', error);
     res.status(500).send(error.message);
   }
 });
@@ -124,6 +136,7 @@ async function copyWeeklyDiscoveries(weeklyDiscoveries, accessToken) {
 }
 
 async function copyPlaylist(playlist, newName, accessToken) {
+  console.log(`Copying playlist ${playlist.name} to ${newName}`);
   const userId = playlist.owner.id;
   const createPlaylistResponse = await axios.post(`https://api.spotify.com/v1/users/${userId}/playlists`, {
     name: newName,
