@@ -15,8 +15,6 @@ app.use(session({ secret: 'secret', resave: true, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-const userTokens = [];
-
 passport.serializeUser((user, done) => {
   done(null, user);
 });
@@ -34,7 +32,6 @@ passport.use(
     },
     (accessToken, refreshToken, expires_in, profile, done) => {
       profile.accessToken = accessToken;
-      userTokens.push(accessToken);
       return done(null, profile);
     }
   )
@@ -46,11 +43,11 @@ app.get(
   '/auth/spotify/callback',
   passport.authenticate('spotify', { failureRedirect: '/' }),
   (req, res) => {
-    res.redirect('/playlists');
+    res.redirect('/');
   }
 );
 
-app.get('/playlists', (req, res) => {
+app.get('/api/playlists', (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -66,12 +63,23 @@ app.get('/playlists', (req, res) => {
     .catch(error => res.status(500).send(error));
 });
 
-app.get('/copy-playlists', (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+app.get('/api/copy-playlists', async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { accessToken } = req.user;
+
+    await copyPlaylists(accessToken);
+
+    res.send('Playlists copied successfully!');
+  } catch (error) {
+    res.status(500).send(error.message);
   }
-  res.send('Playlists copied successfully!');
 });
+
+// Playlist copying functions
 
 async function copyPlaylists(accessToken) {
   const dailyMixes = await getDailyMixes(accessToken);
@@ -80,12 +88,6 @@ async function copyPlaylists(accessToken) {
   await copyDailyMixes(dailyMixes, accessToken);
   await copyWeeklyDiscoveries(weeklyDiscoveries, accessToken);
 }
-
-cron.schedule('0 0 * * *', async () => {
-  for (const accessToken of userTokens) {
-    await copyPlaylists(accessToken);
-  }
-});
 
 async function getDailyMixes(accessToken) {
   const response = await axios.get('https://api.spotify.com/v1/me/playlists', {
