@@ -1,18 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import Playlists from './Playlists';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Spotify Playlist Manager</h1>
-        <a className="App-link" href="/auth/spotify">
-          Log in with Spotify
-        </a>
-      </header>
-      <Playlists />
-    </div>
+    <Router>
+      <div className="App">
+        <header className="App-header">
+          <h1>Spotify Playlist App</h1>
+          <nav>
+            <Link to="/playlists">Playlists</Link>
+          </nav>
+        </header>
+        <Routes>
+          <Route path="/playlists" element={<Playlists />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

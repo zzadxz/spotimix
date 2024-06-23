@@ -1,26 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 function Playlists() {
   const [playlists, setPlaylists] = useState([]);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchPlaylists = async () => {
-      try {
-        const response = await axios.get('/playlists');
+    axios.get('/playlists')
+      .then(response => {
         setPlaylists(response.data.items);
-      } catch (err) {
-        setError('Failed to fetch playlists');
-      }
-    };
-
-    fetchPlaylists();
+      })
+      .catch(error => {
+        console.error('There was an error fetching the playlists!', error);
+      });
   }, []);
-
-  if (error) {
-    return <div>{error}</div>;
-  }
 
   return (
     <div>
@@ -28,8 +20,9 @@ function Playlists() {
       <ul>
         {playlists.map(playlist => (
           <li key={playlist.id}>
-            <img src={playlist.images[0]?.url} alt={playlist.name} width="50" height="50" />
-            {playlist.name}
+            <a href={playlist.external_urls.spotify} target="_blank" rel="noopener noreferrer">
+              {playlist.name}
+            </a>
           </li>
         ))}
       </ul>
