@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 
 function Playlists() {
   const [playlists, setPlaylists] = useState([]);
 
   useEffect(() => {
-    axios.get('/playlists')
-      .then(response => {
-        setPlaylists(response.data.items);
-      })
-      .catch(error => {
-        console.error('There was an error fetching the playlists!', error);
-      });
+    fetch('/playlists')
+      .then(response => response.json())
+      .then(data => setPlaylists(data.items))
+      .catch(error => console.error('Error fetching playlists:', error));
   }, []);
 
   return (
@@ -20,9 +16,7 @@ function Playlists() {
       <ul>
         {playlists.map(playlist => (
           <li key={playlist.id}>
-            <a href={playlist.external_urls.spotify} target="_blank" rel="noopener noreferrer">
-              {playlist.name}
-            </a>
+            <a href={playlist.external_urls.spotify}>{playlist.name}</a>
           </li>
         ))}
       </ul>
