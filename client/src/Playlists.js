@@ -5,22 +5,31 @@ function Playlists() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    console.log('Fetching playlists');
-    fetch('/api/playlists')
+    fetch('/api/check-auth')
       .then(res => res.json())
       .then(data => {
-        console.log('Playlists fetched:', data);
-        setPlaylists(data.items);
+        if (data.authenticated) {
+          fetchPlaylists();
+        } else {
+          window.location.href = '/auth/spotify';
+        }
       })
       .catch(err => console.error(err));
   }, []);
 
+  const fetchPlaylists = () => {
+    fetch('/api/playlists')
+      .then(res => res.json())
+      .then(data => {
+        setPlaylists(data.items);
+      })
+      .catch(err => console.error(err));
+  };
+
   const copyPlaylists = () => {
-    console.log('Copying playlists');
     fetch('/api/copy-playlists')
       .then(res => res.text())
       .then(data => {
-        console.log('Copy playlists response:', data);
         setMessage(data);
       })
       .catch(err => console.error(err));
